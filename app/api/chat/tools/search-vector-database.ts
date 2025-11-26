@@ -1,3 +1,9 @@
+  async execute({ query, topK }) {
+    console.log('vectorDatabaseSearch called with query:', query, 'topK:', topK);
+    try {
+      const k = topK ?? 5;
+      // ...
+
 // @ts-nocheck
 
 import { tool } from 'ai';
