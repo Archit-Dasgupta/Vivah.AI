@@ -1,6 +1,9 @@
 // app/api/vendor/[id]/route.ts
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase";
+// route file is at: app/api/vendor/[id]/route.ts
+// lib is at: /lib/supabase.ts (project root)
+// relative path from this file to lib => ../../../../lib/...
+import { supabaseAdmin } from "../../../../lib/supabase";
 
 /**
  * GET /api/vendor/:id
