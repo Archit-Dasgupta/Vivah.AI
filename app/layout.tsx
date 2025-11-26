@@ -13,21 +13,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyAI3",
-  description: "MyAI3",
+  title: "Vivaah AI",
+  description: "Your Minimal Indian Modern Wedding Assistant",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} antialiased bg-[var(--cream-bg)] text-[var(--text-maroon)]`}
       >
-        {children}
+        <div className="relative min-h-screen">
+          {/* Subtle lotus icon in top corner (optional, can remove) */}
+          <div className="pointer-events-none select-none opacity-[0.06] fixed top-4 right-4 w-28 h-28 bg-[url('/lotus-soft.png')] bg-contain bg-no-repeat" />
+          {children}
+        </div>
       </body>
     </html>
   );
