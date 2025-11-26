@@ -14,6 +14,26 @@ const pinecone = new Pinecone({
 
 const index = pinecone.index(process.env.PINECONE_INDEX_NAME as string);
 
+// -------------------- Types --------------------
+type VectorSearchArgs = {
+  query: string;
+  topK?: number;
+};
+
+type Vendor = {
+  id: string;
+  score: number | undefined;
+  name: string;
+  location: string;
+  category: string;
+  price_range: string;
+  description: string;
+};
+
+type VectorSearchResult = {
+  vendors: Vendor[];
+};
+
 // -------------------- Tool --------------------
 export const vectorDatabaseSearch = tool({
   description:
@@ -21,11 +41,14 @@ export const vectorDatabaseSearch = tool({
 
   parameters: z.object({
     query: z.string().describe('User query about wedding vendors'),
-    topK: z.number().optional().default(5),
+    topK: z.number().min(1).max(10).optional().default(5),
   }),
 
-  async execute({ query, topK }) {
+  // IMPORTANT: use arrow-function syntax, not method syntax
+  execute: async ({ query, topK }: VectorSearchArgs): Promise<VectorSearchResult> => {
     try {
+      const k = topK ?? 5;
+
       // 1. Create embedding for user query
       const embeddingResponse = await openai.embeddings.create({
         model: 'text-embedding-3-small',
@@ -37,12 +60,12 @@ export const vectorDatabaseSearch = tool({
       // 2. Query Pinecone
       const pineconeResponse = await index.query({
         vector: embedding,
-        topK,
+        topK: k,
         includeMetadata: true,
       });
 
       // 3. Format results
-      const vendors =
+      const vendors: Vendor[] =
         pineconeResponse.matches?.map((match) => ({
           id: match.id,
           score: match.score,
@@ -51,13 +74,13 @@ export const vectorDatabaseSearch = tool({
           category: (match.metadata?.category as string) || '',
           price_range: (match.metadata?.price_range as string) || '',
           description: (match.metadata?.description as string) || '',
-        })) || [];
+        })) ?? [];
 
       return { vendors };
     } catch (error) {
       console.error('Vector DB Search Error:', error);
+      // On error, just return no vendors so the model can fail gracefully
       return { vendors: [] };
     }
   },
 });
-
