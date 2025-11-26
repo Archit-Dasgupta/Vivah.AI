@@ -1,14 +1,18 @@
 // app/api/chat/tools/search-vector-database.ts
 // @ts-nocheck
-import OpenAI from "openai";
-
 /**
  * Direct Pinecone index query (no SDK, no controller host).
+ * - Safe on import (no throws)
+ * - Uses OpenAI embeddings and direct index-host /query endpoint
+ *
  * Required env:
  * - OPENAI_API_KEY
  * - PINECONE_API_KEY
- * - PINECONE_INDEX_HOST  (index host exact from Pinecone UI, include https://)
+ * - PINECONE_INDEX_HOST  (exact index host from Pinecone UI, include https://)
+ * - EMBEDDING_MODEL (optional; default text-embedding-3-small)
  */
+
+import OpenAI from "openai";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY ?? "";
@@ -27,8 +31,13 @@ async function embedText(text) {
     console.warn("[search-tool] embedText: OPENAI_API_KEY missing");
     return null;
   }
-  const r = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: text });
-  return r?.data?.[0]?.embedding ?? null;
+  try {
+    const r = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: text });
+    return r?.data?.[0]?.embedding ?? null;
+  } catch (err) {
+    console.error("[search-tool] embedding error:", err);
+    throw err;
+  }
 }
 
 function normalizeMatch(m) {
