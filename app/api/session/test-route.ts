@@ -1,5 +1,5 @@
-// app/api/session/test-route.ts
-import { createSession, getSession } from "@/lib/session";
+import { createSession, getSession } from "../../../lib/session";
+
 
 export async function POST(req) {
   try {
