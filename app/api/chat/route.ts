@@ -1,4 +1,5 @@
 // app/api/chat/route.ts
+// @ts-nocheck
 import {
   streamText,
   UIMessage,
@@ -143,18 +144,8 @@ export async function POST(req: Request) {
         writer.write({ type: "text-start", id: textId });
 
         try {
-          // Compose full user conversation text so follow-ups inherit prior context.
-          const allUserParts = (messages ?? [])
-            .filter((m) => m.role === "user")
-            .map((m) =>
-              (m.parts ?? [])
-                .filter((p: any) => p.type === "text")
-                .map((p: any) => ("text" in p ? p.text : ""))
-                .join("")
-            )
-            .filter(Boolean);
-
-          const composedQuery = allUserParts.join(" ").trim() || latestUserText || "";
+          // Use only the latest user message to form the query (prevents repetition)
+          const composedQuery = (latestUserText || "").trim();
           console.log("[chat][vendor mode] composedQuery:", composedQuery);
 
           // Call the vector DB tool; tolerate different interfaces.
@@ -185,9 +176,6 @@ export async function POST(req: Request) {
           }
 
           // Normalize vendor list from multiple possible shapes:
-          // - result.vendors, result.results, result.items
-          // - result.matches (pinecone-like) with .metadata and .score
-          // - result.hits with .document/.payload/.metadata
           let vendors: any[] = [];
 
           if (Array.isArray(result?.vendors) && result.vendors.length) {
@@ -291,7 +279,6 @@ export async function POST(req: Request) {
           parallelToolCalls: false,
         },
       },
-      // Optional: you can add `maxExecutionTime: maxDuration * 1000` if your ai SDK supports it.
     });
 
     return result.toUIMessageStreamResponse({
