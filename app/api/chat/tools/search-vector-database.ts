@@ -1,9 +1,3 @@
-  async execute({ query, topK }) {
-    console.log('vectorDatabaseSearch called with query:', query, 'topK:', topK);
-    try {
-      const k = topK ?? 5;
-      // ...
-
 // @ts-nocheck
 
 import { tool } from 'ai';
@@ -28,15 +22,16 @@ export const vectorDatabaseSearch = tool({
     'Search the Pinecone vendor database and return the most relevant wedding vendors based on the user query.',
 
   parameters: z.object({
-    query: z.string().describe('User query about wedding vendors'),
-    topK: z.number().min(1).max(10).optional().default(5),
+    query: z.string(),
+    topK: z.number().optional().default(5),
   }),
 
-  async execute({ query, topK }) {
+  execute: async ({ query, topK }) => {
+    console.log('vectorDatabaseSearch called:', query);
+
     try {
       const k = topK ?? 5;
 
-      // 1. Create embedding for user query
       const embeddingResponse = await openai.embeddings.create({
         model: 'text-embedding-3-small',
         input: query,
@@ -44,23 +39,21 @@ export const vectorDatabaseSearch = tool({
 
       const embedding = embeddingResponse.data[0].embedding;
 
-      // 2. Query Pinecone
       const pineconeResponse = await index.query({
         vector: embedding,
         topK: k,
         includeMetadata: true,
       });
 
-      // 3. Format results
       const vendors =
         pineconeResponse.matches?.map((match) => ({
           id: match.id,
           score: match.score,
-          name: (match.metadata?.name as string) || '',
-          location: (match.metadata?.location as string) || '',
-          category: (match.metadata?.category as string) || '',
-          price_range: (match.metadata?.price_range as string) || '',
-          description: (match.metadata?.description as string) || '',
+          name: match.metadata?.name || '',
+          location: match.metadata?.location || '',
+          category: match.metadata?.category || '',
+          price_range: match.metadata?.price_range || '',
+          description: match.metadata?.description || '',
         })) ?? [];
 
       return { vendors };
