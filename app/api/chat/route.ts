@@ -44,6 +44,9 @@ function getSupabase() {
 
 export const maxDuration = 30;
 
+// Toggle to enable JSON sentinels in the stream (for debugging). Default: off.
+const EMIT_JSON_SENTINELS = process.env.EMIT_JSON_SENTINELS === "1";
+
 function getLatestUserText(messages: UIMessage[]): string | null {
   try {
     const latestUserMessage = messages?.filter((m) => m.role === "user").pop();
@@ -428,15 +431,19 @@ ${JSON.stringify(facts)}
                   // if no human text, write a simple header
                   writer.write({ type: "text-delta", id: textId, delta: `Top wedding ${category}s in ${city}` });
                 }
-                // Then write the structured JSON sentinel (client reads this)
-                try {
-                  writer.write({
-                    type: "text-delta",
-                    id: textId,
-                    delta: `\n\n___GUIDE_JSON___${JSON.stringify(guideJson)}___END_GUIDE_JSON___`,
-                  });
-                } catch (e) {
-                  console.warn("[guide] failed to emit guide JSON sentinel:", e);
+                // Emit structured JSON sentinel only if enabled
+                if (EMIT_JSON_SENTINELS) {
+                  try {
+                    writer.write({
+                      type: "text-delta",
+                      id: textId,
+                      delta: `\n\n___GUIDE_JSON___${JSON.stringify(guideJson)}___END_GUIDE_JSON___`,
+                    });
+                  } catch (e) {
+                    console.warn("[guide] failed to emit guide JSON sentinel:", e);
+                  }
+                } else {
+                  // intentionally not emitting JSON sentinel into chat UI
                 }
               };
 
@@ -458,7 +465,7 @@ ${JSON.stringify(facts)}
                       guideJsonObj = null;
                     }
                   }
-                  // Emit human and JSON sentinel separately
+                  // Emit human and (maybe) JSON sentinel separately
                   await emitGuideHumanAndJson(humanPart || null, guideJsonObj || (() => {
                     // fallback guideJson (constructed below)
                     return {
@@ -519,7 +526,7 @@ ${JSON.stringify(facts)}
                   insider_tips: ["Ask for floating crowd adjustments.", "Use live stations to boost perceived quality.", "Check venue tie-ups before confirming outside caterers."],
                 };
 
-                // Emit human and JSON sentinel separately
+                // Emit human and (maybe) JSON sentinel separately
                 await emitGuideHumanAndJson(fallback.join("\n\n"), guideJson);
               }
 
@@ -626,33 +633,37 @@ ${JSON.stringify(facts)}
                 }
               }
 
-              // Emit human readable text (no JSON)
+              // Emit human readable text (no JSON unless flag enabled)
               writer.write({ type: "text-delta", id: textId, delta: parts.join("\n\n") });
 
               // Also emit a JSON sentinel for the UI to render a detailed card (separate delta)
-              try {
-                const payload = {
-                  type: "vendor_details",
-                  vendor_id: v.id ?? null,
-                  name: v.name ?? null,
-                  refined_short_description: v.short_description ?? null,
-                  price_range:
-                    (v.min_price || v.max_price) ? `${v.min_price ?? "NA"} - ${v.max_price ?? "NA"} ${v.currency ?? "INR"}` : null,
-                  city: v.city ?? null,
-                  avg_rating: details.stats?.avg_rating ?? v.avg_rating ?? null,
-                  review_count: details.stats?.review_count ?? v.rating_count ?? null,
-                  top_reviews: (details.top_reviews || []).slice(0, 5).map((r: any) => ({ rating: r.rating, title: r.title, body: r.body ?? r.text, reviewer_name: r.reviewer_name })),
-                  images: (details.images || []).slice(0, 10).map((i: any) => ({ url: i.url, caption: i.caption, is_main: i.is_main })),
-                  offers: (details.offers || []).slice(0, 10).map((of: any) => ({ title: of.title, description: of.description, price: of.price, currency: of.currency, min_persons: of.min_persons, max_persons: of.max_persons })),
-                };
-                // sentinel emitted separately so UI can detect and parse
-                writer.write({
-                  type: "text-delta",
-                  id: textId,
-                  delta: `\n\n__VENDOR_DETAILS_JSON__${JSON.stringify(payload)}__END_VENDOR_DETAILS_JSON__`,
-                });
-              } catch (e) {
-                console.warn("[chat] failed to emit vendor details JSON sentinel:", e);
+              if (EMIT_JSON_SENTINELS) {
+                try {
+                  const payload = {
+                    type: "vendor_details",
+                    vendor_id: v.id ?? null,
+                    name: v.name ?? null,
+                    refined_short_description: v.short_description ?? null,
+                    price_range:
+                      (v.min_price || v.max_price) ? `${v.min_price ?? "NA"} - ${v.max_price ?? "NA"} ${v.currency ?? "INR"}` : null,
+                    city: v.city ?? null,
+                    avg_rating: details.stats?.avg_rating ?? v.avg_rating ?? null,
+                    review_count: details.stats?.review_count ?? v.rating_count ?? null,
+                    top_reviews: (details.top_reviews || []).slice(0, 5).map((r: any) => ({ rating: r.rating, title: r.title, body: r.body ?? r.text, reviewer_name: r.reviewer_name })),
+                    images: (details.images || []).slice(0, 10).map((i: any) => ({ url: i.url, caption: i.caption, is_main: i.is_main })),
+                    offers: (details.offers || []).slice(0, 10).map((of: any) => ({ title: of.title, description: of.description, price: of.price, currency: of.currency, min_persons: of.min_persons, max_persons: of.max_persons })),
+                  };
+                  // sentinel emitted separately so UI can detect and parse
+                  writer.write({
+                    type: "text-delta",
+                    id: textId,
+                    delta: `\n\n__VENDOR_DETAILS_JSON__${JSON.stringify(payload)}__END_VENDOR_DETAILS_JSON__`,
+                  });
+                } catch (e) {
+                  console.warn("[chat] failed to emit vendor details JSON sentinel:", e);
+                }
+              } else {
+                // intentionally not emitting raw JSON sentinel into chat UI
               }
 
             } else {
@@ -711,20 +722,24 @@ ${JSON.stringify(facts)}
                     writer.write({ type: "text-delta", id: textId, delta: `Recent reviews for ${v.name}:\n\n${lines.join("\n")}` });
 
                     // Also emit a small JSON sentinel for reviews if desired by UI
-                    try {
-                      const payload = {
-                        type: "vendor_reviews",
-                        vendor_id: v.id,
-                        vendor_name: v.name,
-                        reviews: (revs || []).slice(0, 20).map((r: any) => ({ rating: r.rating, title: r.title, body: r.body ?? r.text, reviewer_name: r.reviewer_name, review_ts: r.review_ts })),
-                      };
-                      writer.write({
-                        type: "text-delta",
-                        id: textId,
-                        delta: `\n\n__VENDOR_REVIEWS_JSON__${JSON.stringify(payload)}__END_VENDOR_REVIEWS_JSON__`,
-                      });
-                    } catch (e) {
-                      console.warn("[chat] failed to emit vendor reviews JSON sentinel:", e);
+                    if (EMIT_JSON_SENTINELS) {
+                      try {
+                        const payload = {
+                          type: "vendor_reviews",
+                          vendor_id: v.id,
+                          vendor_name: v.name,
+                          reviews: (revs || []).slice(0, 20).map((r: any) => ({ rating: r.rating, title: r.title, body: r.body ?? r.text, reviewer_name: r.reviewer_name, review_ts: r.review_ts })),
+                        };
+                        writer.write({
+                          type: "text-delta",
+                          id: textId,
+                          delta: `\n\n__VENDOR_REVIEWS_JSON__${JSON.stringify(payload)}__END_VENDOR_REVIEWS_JSON__`,
+                        });
+                      } catch (e) {
+                        console.warn("[chat] failed to emit vendor reviews JSON sentinel:", e);
+                      }
+                    } else {
+                      // intentionally not emitting raw JSON sentinel into chat UI
                     }
 
                     writer.write({ type: "text-end", id: textId });
@@ -881,12 +896,16 @@ ${JSON.stringify(facts)}
           }));
 
           try {
-            // Emit vendor hits sentinel separately (client will parse this and render cards)
-            writer.write({
-              type: "text-delta",
-              id: textId,
-              delta: `\n\n__VENDOR_HITS_JSON__${JSON.stringify(structured)}__END_VENDOR_HITS_JSON__`,
-            });
+            // Emit vendor hits sentinel separately (client will parse this and render cards) only if enabled.
+            if (EMIT_JSON_SENTINELS) {
+              writer.write({
+                type: "text-delta",
+                id: textId,
+                delta: `\n\n__VENDOR_HITS_JSON__${JSON.stringify(structured)}__END_VENDOR_HITS_JSON__`,
+              });
+            } else {
+              // intentionally not emitting raw hits JSON sentinel to chat UI
+            }
           } catch (e) {
             console.warn("[chat] failed to write JSON sentinel:", e);
           }
