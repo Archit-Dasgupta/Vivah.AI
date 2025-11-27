@@ -34,7 +34,6 @@ const STORAGE_KEY = "chat-messages";
 
 export default function Chat() {
   const [isClient, setIsClient] = useState(false);
-  const welcomeMessageShownRef = useRef(false);
   const [durations, setDurations] = useState<Record<string, number>>({});
 
   // Defensive localStorage read
@@ -130,12 +129,12 @@ export default function Chat() {
     }
   }, [messages, durations, isClient]);
 
+  // Show welcome message whenever the active message list is empty
+  // (this makes the welcome show every time a NEW chat is created / cleared)
   useEffect(() => {
-    if (
-      isClient &&
-      initialMessages.length === 0 &&
-      !welcomeMessageShownRef.current
-    ) {
+    if (!isClient) return;
+
+    if (Array.isArray(messages) && messages.length === 0) {
       const welcomeMsg: UIMessage = {
         id: `welcome-${Date.now()}`,
         role: "assistant",
@@ -143,13 +142,15 @@ export default function Chat() {
       };
       try {
         setMessages([welcomeMsg]);
-      } catch {}
+      } catch {
+        // some SDK versions restrict setMessages shape — best-effort
+      }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: [welcomeMsg], durations: {} }));
       } catch {}
-      welcomeMessageShownRef.current = true;
     }
-  }, [isClient, initialMessages.length, setMessages]);
+    // Only react to the live messages list and client-state
+  }, [isClient, messages.length, setMessages]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -168,6 +169,8 @@ export default function Chat() {
   };
 
   function onSubmit(data: z.infer<typeof formSchema>) {
+    // Pass sessionKey inside metadata to align with sendMessage types
+    // sendMessage typing is permissive above so this call should compile across SDK versions
     sendMessage({
       text: data.message,
       metadata: { sessionKey: getOrCreateSessionKey() },
@@ -178,40 +181,49 @@ export default function Chat() {
   return (
     <div className="flex h-screen justify-center items-center">
       <main className="w-full h-screen relative">
-        {/* ===== Header with gold underline ===== */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-[var(--cream-bg)] border-b-[2px] border-[var(--gold-1)] shadow-sm">
+        {/* ===== Premium Header with Glass Effect (opaque if you switch to chat-header) ===== */}
+        <div className="fixed top-0 left-0 right-0 z-50 glass-header">
           <ChatHeader>
             <ChatHeaderBlock />
-            <ChatHeaderBlock className="justify-center items-center gap-2">
-              <Avatar className="size-8 ring-2 ring-[var(--gold-1)] avatar-ring">
-                <AvatarImage src="/logo.png" />
-                <AvatarFallback>
-                  <Image src="/logo.png" alt="Logo" width={36} height={36} />
-                </AvatarFallback>
-              </Avatar>
-              <p className="tracking-tight font-semibold text-[var(--text-maroon)]">
-                Chat with {AI_NAME}
-              </p>
+            <ChatHeaderBlock className="justify-center items-center gap-3">
+              <div className="avatar-premium">
+                <Avatar className="size-10">
+                  <AvatarImage src="/logo.png" />
+                  <AvatarFallback className="bg-gradient-to-br from-[var(--champagne-gold)] to-[var(--bright-gold)] text-white font-semibold">
+                    V
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="flex flex-col">
+                <p className="tracking-tight font-semibold text-[var(--deep-plum)] text-base">
+                  Chat with {AI_NAME}
+                </p>
+                <p className="text-xs text-[var(--rich-burgundy)] opacity-70">
+                  Your Wedding Planning Assistant
+                </p>
+              </div>
             </ChatHeaderBlock>
 
             <ChatHeaderBlock className="justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-[var(--gold-1)] text-[var(--text-maroon)] rounded-full px-3 py-1"
+              <button
+                className="btn-outline-premium"
                 onClick={clearChat}
+                aria-label="New chat"
+                title="Start new chat"
+                type="button"
               >
                 <Plus className="size-4" />
                 {CLEAR_CHAT_TEXT}
-              </Button>
+              </button>
             </ChatHeaderBlock>
           </ChatHeader>
         </div>
 
-        {/* ===== Messages ===== */}
-        <div className="h-screen overflow-y-auto px-5 py-4 pt-[120px] pb-[170px]">
+        {/* ===== Messages Area (centered column) ===== */}
+        <div className="h-screen overflow-y-auto px-4 sm:px-6 py-4 pt-[110px] pb-[160px]">
           <div className="flex flex-col items-center">
-            <div className="w-full">
+            {/* Constrain chat column so messages sit centered on large screens */}
+            <div className="w-full max-w-3xl mx-auto">
               <div className="chat-card">
                 {isClient ? (
                   <>
@@ -232,14 +244,16 @@ export default function Chat() {
                       }}
                     />
                     {status === "submitted" && (
-                      <div className="flex justify-center pt-4">
-                        <Loader2 className="size-4 animate-spin text-[var(--text-maroon)]" />
+                      <div className="flex items-center gap-2 mt-4">
+                        <Loader2 className="size-5 animate-spin text-[var(--champagne-gold)]" />
+                        <span className="text-sm text-[var(--rich-burgundy)]">Thinking...</span>
                       </div>
                     )}
                   </>
                 ) : (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="size-4 animate-spin text-[var(--text-maroon)]" />
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="size-5 animate-spin text-[var(--champagne-gold)]" />
+                    <span className="text-sm text-[var(--rich-burgundy)]">Loading...</span>
                   </div>
                 )}
               </div>
@@ -247,9 +261,9 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* ===== Input Bar (Cream + Gold) ===== */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--cream-bg)] pb-4 pt-3 border-t-2 border-[var(--gold-1)]">
-          <div className="max-w-3xl mx-auto px-5">
+        {/* ===== Premium Input Bar (fixed bottom) ===== */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 glass-footer pb-4 pt-4">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
             <form id="chat-form" onSubmit={form.handleSubmit(onSubmit)}>
               <FieldGroup>
                 <Controller
@@ -258,31 +272,32 @@ export default function Chat() {
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel className="sr-only">Message</FieldLabel>
-                      <div className="relative input-pill">
+                      <div className="relative flex items-center">
                         <Input
                           {...field}
-                          placeholder="Type your message..."
-                          className="h-14 rounded-2xl pl-5 pr-16 bg-white border-[var(--gold-1)] shadow-sm"
+                          placeholder="Ask about venues, vendors, or budget planning..."
+                          className="input-premium h-14 pl-6 pr-16 w-full"
                           disabled={status === "streaming"}
+                          aria-label="Message"
                         />
 
                         {(status === "ready" || status === "error") && (
-                          <Button
+                          <button
                             type="submit"
-                            disabled={!field.value.trim()}
-                            size="icon"
-                            className="button-icon absolute right-3 top-3"
+                            disabled={!field.value?.trim()}
+                            className="btn-premium absolute right-3 top-1/2 -translate-y-1/2"
+                            style={{ zIndex: 10 }}
                             aria-label="Send message"
                           >
-                            <ArrowUp className="size-4" />
-                          </Button>
+                            <ArrowUp className="size-5" />
+                          </button>
                         )}
 
-                        {(status === "streaming" ||
-                          status === "submitted") && (
-                          <Button
-                            size="icon"
-                            className="button-icon stream-stop absolute right-3 top-3"
+                        {(status === "streaming" || status === "submitted") && (
+                          <button
+                            type="button"
+                            className="btn-premium absolute right-3 top-1/2 -translate-y-1/2"
+                            style={{ zIndex: 10, background: "linear-gradient(135deg, #4B1633, #6B2D4A)" }}
                             onClick={(e) => {
                               e.preventDefault();
                               stop();
@@ -290,7 +305,7 @@ export default function Chat() {
                             aria-label="Stop generation"
                           >
                             <Square className="size-4" />
-                          </Button>
+                          </button>
                         )}
                       </div>
                     </Field>
@@ -300,12 +315,10 @@ export default function Chat() {
             </form>
           </div>
 
-          <div className="text-xs text-[var(--text-maroon)] opacity-70 text-center pt-2">
+          <div className="footer-premium mt-3">
             © {new Date().getFullYear()} {OWNER_NAME} •{" "}
-            <Link href="/terms" className="underline">
-              Terms
-            </Link>
-            • Powered by Vivaah AI
+            <Link href="/terms">Terms</Link>
+            {" "}• Powered by Vivaah AI
           </div>
         </div>
       </main>
