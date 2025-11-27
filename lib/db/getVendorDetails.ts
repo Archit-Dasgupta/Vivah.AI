@@ -1,16 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
+// lib/db/getVendorDetails.ts
+// @ts-nocheck
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+import { getSupabaseAdmin } from "../supabase"; // adjust path if needed
 
-// This function fetches ALL info needed for "More details"
-// It is minimal, scalable, and optimized using indexes we created.
 export async function getVendorDetails(vendorId: string) {
-  // 1. Fetch vendor core data
+  if (!vendorId) return null;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    throw new Error(
+      "Supabase not configured. Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in Vercel."
+    );
+  }
+
+  // 1. Vendor core data
   const { data: vendor, error: vendorError } = await supabase
-    .from('vendors')
+    .from("vendors")
     .select(`
       id, name, category, sub_category,
       short_description, long_description,
@@ -19,53 +24,47 @@ export async function getVendorDetails(vendorId: string) {
       min_price, max_price, currency,
       capacity, avg_rating, rating_count
     `)
-    .eq('id', vendorId)
+    .eq("id", vendorId)
     .single();
 
   if (vendorError || !vendor) {
-    console.error('Vendor fetch error:', vendorError);
+    console.error("[getVendorDetails] vendor fetch error:", vendorError);
     return null;
   }
 
-  // 2. Fetch up to 10 images (main first)
+  // 2. Images
   const { data: images } = await supabase
-    .from('vendor_images')
-    .select('id, url, caption, is_main')
-    .eq('vendor_id', vendorId)
-    .order('is_main', { ascending: false })
-    .order('uploaded_at', { ascending: false })
+    .from("vendor_images")
+    .select("id, url, caption, is_main")
+    .eq("vendor_id", vendorId)
+    .order("is_main", { ascending: false })
+    .order("uploaded_at", { ascending: false })
     .limit(10);
 
-  // 3. Fetch vendor offers
+  // 3. Offers
   const { data: offers } = await supabase
-    .from('vendor_offers')
-    .select('id, title, description, price, currency, min_persons, max_persons')
-    .eq('vendor_id', vendorId)
-    .order('price', { ascending: true })
+    .from("vendor_offers")
+    .select("id, title, description, price, currency, min_persons, max_persons")
+    .eq("vendor_id", vendorId)
+    .order("price", { ascending: true })
     .limit(10);
 
-  // 4. Fetch TOP 5 reviews (sorted by rating > recent)
+  // 4. Top 5 reviews
   const { data: reviews } = await supabase
-    .from('vendor_reviews')
-    .select('id, reviewer_name, rating, title, body, review_date, source')
-    .eq('vendor_id', vendorId)
-    .order('rating', { ascending: false })
-    .order('review_ts', { ascending: false })
+    .from("vendor_reviews")
+    .select("id, reviewer_name, rating, title, body, review_date, source")
+    .eq("vendor_id", vendorId)
+    .order("rating", { ascending: false })
+    .order("review_ts", { ascending: false })
     .limit(5);
 
-  // 5. Stats via inline aggregate (fast because we indexed vendor_id)
-  const { data: statsRow } = await supabase
-    .from('vendor_reviews')
-    .select('rating', { count: 'exact' })
-    .eq('vendor_id', vendorId);
-
-  // Inline compute basic stats
-  const review_count = statsRow?.length ?? 0;
+  // 5. Stats
+  const review_count = reviews?.length ?? 0;
   const avg_rating =
-    reviews && reviews.length > 0
+    review_count > 0
       ? Number(
           (
-            reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length
+            reviews.reduce((a, r) => a + (r.rating || 0), 0) / review_count
           ).toFixed(2)
         )
       : vendor.avg_rating || 0;
