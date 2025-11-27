@@ -278,8 +278,13 @@ export default function Chat() {
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel className="sr-only">Message</FieldLabel>
+
+                      {/* ---------------------------
+                          INPUT ROW: button INSIDE pill
+                          --------------------------- */}
                       <div className="relative flex items-center">
-                        <div className="input-premium w-full">
+                        {/* The pill is the positioned container so the button is anchored inside it */}
+                        <div className="input-premium w-full relative">
                           <Input
                             {...field}
                             placeholder="Ask about venues, vendors, or budget planning..."
@@ -287,34 +292,40 @@ export default function Chat() {
                             disabled={status === "streaming"}
                             aria-label="Message"
                           />
+
+                          {(status === "ready" || status === "error") && (
+                            <button
+                              type="submit"
+                              disabled={!field.value?.trim()}
+                              className="btn-premium absolute"
+                              style={{ right: 12, top: "50%", transform: "translateY(-50%)", zIndex: 10 }}
+                              aria-label="Send message"
+                            >
+                              <ArrowUp className="size-5" />
+                            </button>
+                          )}
+
+                          {(status === "streaming" || status === "submitted") && (
+                            <button
+                              type="button"
+                              className="btn-premium absolute"
+                              style={{
+                                right: 12,
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                zIndex: 10,
+                                background: "linear-gradient(135deg, #4B1633, #6B2D4A)",
+                              }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                stop();
+                              }}
+                              aria-label="Stop generation"
+                            >
+                              <Square className="size-4" />
+                            </button>
+                          )}
                         </div>
-
-                        {(status === "ready" || status === "error") && (
-                          <button
-                            type="submit"
-                            disabled={!field.value?.trim()}
-                            className="btn-premium absolute right-3 top-1/2 -translate-y-1/2 metallic-sheen"
-                            style={{ zIndex: 10 }}
-                            aria-label="Send message"
-                          >
-                            <ArrowUp className="size-5" />
-                          </button>
-                        )}
-
-                        {(status === "streaming" || status === "submitted") && (
-                          <button
-                            type="button"
-                            className="btn-premium absolute right-3 top-1/2 -translate-y-1/2"
-                            style={{ zIndex: 10, background: "linear-gradient(135deg, #4B1633, #6B2D4A)" }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              stop();
-                            }}
-                            aria-label="Stop generation"
-                          >
-                            <Square className="size-4" />
-                          </button>
-                        )}
                       </div>
                     </Field>
                   )}
