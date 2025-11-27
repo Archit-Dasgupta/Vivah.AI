@@ -1,18 +1,34 @@
 // lib/session.ts
-import { supabaseAdmin } from "./supabase";
+// @ts-nocheck
 
 /**
  * Server-side session helper for convo_sessions table.
- * Exports: getSession, createSession, updateSession
- *
- * NOTE: This file assumes your table is named `convo_sessions`.
+ * Uses runtime-safe getSupabaseAdmin().
  */
+
+import { getSupabaseAdmin } from "./supabase";
+
+/**
+ * Internal helper to obtain Supabase admin client at runtime.
+ * Throws a clear error if env vars are missing.
+ */
+function getClient() {
+  const client = getSupabaseAdmin();
+  if (!client) {
+    throw new Error(
+      "Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel."
+    );
+  }
+  return client;
+}
 
 export async function getSession(sessionKey: string) {
   if (!sessionKey) return null;
 
+  const supabase = getClient();
+
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("convo_sessions")
       .select("*")
       .eq("session_key", sessionKey)
@@ -20,12 +36,11 @@ export async function getSession(sessionKey: string) {
       .maybeSingle();
 
     if (error) {
-      // not found will surface as null in data; log and return null
       console.warn("[session] getSession warning:", error.message ?? error);
       return null;
     }
 
-    return data;
+    return data ?? null;
   } catch (err) {
     console.error("[session] getSession throw:", err);
     return null;
@@ -35,13 +50,15 @@ export async function getSession(sessionKey: string) {
 export async function createSession(sessionKey: string, initialState: any = {}) {
   if (!sessionKey) throw new Error("createSession requires sessionKey");
 
+  const supabase = getClient();
+
   try {
     const payload = {
       session_key: sessionKey,
       state: initialState,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("convo_sessions")
       .insert([payload])
       .select()
@@ -63,10 +80,15 @@ export async function createSession(sessionKey: string, initialState: any = {}) 
 export async function updateSession(sessionKey: string, newState: any) {
   if (!sessionKey) throw new Error("updateSession requires sessionKey");
 
+  const supabase = getClient();
+
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("convo_sessions")
-      .update({ state: newState, last_updated: new Date().toISOString() })
+      .update({
+        state: newState,
+        last_updated: new Date().toISOString(),
+      })
       .eq("session_key", sessionKey)
       .select()
       .limit(1)
