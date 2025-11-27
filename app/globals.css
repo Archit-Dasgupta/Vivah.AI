@@ -10,8 +10,8 @@
 /* ---- Color tokens (jewel + tuned rose-gold / pop) ---- */
 :root {
   /* Jewel / purple base (deeper for contrast) */
-  --deep-plum: #40102a;
-  --rich-burgundy: #6a243e;
+  --deep-plum: #4A0D2B;        /* tuned to a stronger, solid purple */
+  --rich-burgundy: #7a1f3f;    /* slightly brighter than before for accents */
   --pearl-white: #fffcf9;
   --cream-luxury: #fbf6f2;
   --blush-rose: #f7e6e8;
@@ -253,18 +253,39 @@ body {
 ::placeholder { color: rgba(64,16,42,0.42); }
 
 /* ===== Buttons & outlines ===== */
+
+/* ---- Updated: Solid purple outline variant with hover fill ---- */
 .btn-outline-premium {
   background: transparent;
-  color: var(--deep-plum);
-  border: 1.5px solid rgba(216,160,130,0.16);
+  color: var(--deep-plum);                  /* strong purple text */
+  border: 2px solid var(--deep-plum);       /* solid purple border for clarity */
   border-radius: 24px;
-  padding: 8px 18px;
+  padding: 10px 22px;
   font-weight: 600;
+  font-size: 0.95rem;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  cursor: pointer;
+  transition: all 0.22s ease-in-out;
+  box-shadow: 0 2px 6px rgba(74, 12, 35, 0.06);
 }
-.btn-outline-premium:hover { background: linear-gradient(135deg, var(--bright-gold), var(--champagne-gold)); color: #fff; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(184,110,83,0.12); }
+
+/* Hover: solid purple fill, white text */
+.btn-outline-premium:hover {
+  background: var(--deep-plum);
+  border-color: var(--deep-plum);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(74, 12, 35, 0.16);
+}
+
+/* Active/pressed state */
+.btn-outline-premium:active {
+  transform: translateY(0px) scale(0.98);
+  box-shadow: 0 3px 10px rgba(74, 12, 35, 0.12);
+}
 
 /* metallic helpers */
 .metallic-gradient { background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, var(--bright-gold) 12%, var(--champagne-gold) 50%, var(--warm-gold) 100%); }
