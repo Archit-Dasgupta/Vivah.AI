@@ -3,50 +3,64 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ==== VIVAAH PALETTE ==== */
+/* ==== VIVAAH PALETTE (preserved + enriched) ==== */
 :root {
-  /* Core Vivaah Colors */
+  /* Original Vivaah tokens (kept for compatibility) */
   --cream-bg: #f0f0e0;
   --cream-bg-2: #f7f6ed;
   --text-maroon: #602020;
   --gold-1: #c09030;
   --gold-2: #d0a040;
 
-  /* ShadCN mapped colors */
-  --background: var(--cream-bg);
-  --foreground: var(--text-maroon);
+  /* Enriched wedding tokens (safe, used selectively) */
+  --maroon-main: #6B1A1A;
+  --rose-gold: #D7A46A;
+  --rose-gold-soft: #EBC9A9;
+  --blush: #FFECEC;
+  --pale-blush: #FFF3F3;
+  --ivory: #FFF9F3;
+  --cream: #F8EFE6;
+  --sand: #E8DCCB;
+  --accent-plum: #4A1430;
 
+  /* Map legacy tokens to enriched tokens where appropriate (non-destructive) */
+  --bg-main: var(--ivory);
+  --bg-secondary: var(--cream);
   --card: var(--cream-bg-2);
   --card-foreground: var(--text-maroon);
 
-  --primary: var(--gold-1);
+  --primary: var(--rose-gold);
   --primary-foreground: #fff;
 
-  --secondary: #f7f2e9;
+  --secondary: #FFF6F4;
   --secondary-foreground: var(--text-maroon);
 
   --muted: #efece2;
   --muted-foreground: #7a5a5a;
 
-  --border: #e0dbc8;
-  --input: #e5decf;
-  --ring: var(--gold-1);
+  --border: rgba(215,164,106,0.12);
+  --input: rgba(232,183,124,0.14);
+  --ring: var(--rose-gold);
 
   --radius: 0.75rem;
 }
 
-/* ===== Page background (upgraded to premium gradient + motif) ===== */
-/* Replaces the heavy radial dots with a soft gradient and a large subtle motif */
+/* ===== Page background (romantic gradient + softened motif) ===== */
 body {
-  background: linear-gradient(135deg, #faf7f2 0%, #fffdf7 100%);
-  /* keep motif but move to corner, larger and subtle */
-  background-image: url("/subtle-mandala.png"), radial-gradient(rgba(192, 144, 48, 0.02) 1px, transparent 2px);
-  background-size: 700px, 25px 25px;
+  background: linear-gradient(
+    135deg,
+    #fff9f3 0%,
+    #f8efe6 35%,
+    #fff3f3 100%
+  );
+  background-image: url("/subtle-mandala.png"), radial-gradient(rgba(215,164,106,0.02) 1px, transparent 2px);
+  background-size: 650px, 25px 25px;
   background-position: top right, center;
   background-repeat: no-repeat, repeat;
   color: var(--text-maroon);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
 }
 
 /* ===== Frosted / glass utility (use for header, input bar, cards) ===== */
@@ -54,75 +68,81 @@ body {
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(6px) saturate(120%);
   -webkit-backdrop-filter: blur(6px) saturate(120%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
-/* ===== Chat Card (new: center the chat within a white glass card) ===== */
+/* ===== Chat Card (center the chat within a glass card) ===== */
 .chat-card {
   width: 100%;
-  max-width: 56rem; /* same as max-w-3xl */
+  max-width: 56rem; /* max-w-3xl equivalent */
   margin: 0 auto;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.86);
   backdrop-filter: blur(8px);
   border-radius: 1.25rem; /* rounded-3xl */
-  box-shadow: 0 8px 30px rgba(0,0,0,0.05);
-  border: 1px solid rgba(192,144,48,0.12);
+  box-shadow: 0 10px 40px rgba(58,26,26,0.06);
+  border: 1px solid var(--border);
   padding: 1.5rem;
+  animation: cardIn 220ms ease;
 }
 
-/* ===== Header tweaks (frosted + thin gold border) ===== */
+/* ===== Header tweaks (frosted + thin rose-gold border) ===== */
 .chat-header {
-  border-bottom: 1.5px solid var(--gold-1);
-  background: linear-gradient(to bottom, rgba(255,253,250,0.9), transparent);
-  /* support using frosted class as well */
+  border-bottom: 1.25px solid var(--rose-gold, var(--gold-1));
+  background: linear-gradient(to bottom, rgba(255,248,244,0.92), rgba(255,255,255,0.6));
+  backdrop-filter: blur(6px);
 }
 
 /* Add subtle floating avatar ring */
 .avatar-ring {
-  box-shadow: 0 2px 8px rgba(192,144,48,0.08);
+  box-shadow: 0 3px 12px rgba(215,164,106,0.08);
   border-radius: 9999px;
+  border: 1px solid rgba(215,164,106,0.08);
 }
 
-/* ===== Chat Bubble Adjustments (more rounded, padding, soft shadows) ===== */
+/* ===== Chat Bubble Adjustments (rounded, padding, warm shadows) ===== */
 /* User bubble (right-aligned) */
 .message-user {
-  background: #fff7ea;
-  border: 1px solid var(--gold-1);
+  background: #ffffff;
+  border: 1px solid var(--rose-gold-soft, rgba(192,144,48,0.18));
   border-radius: 18px;
   padding: 12px 16px;
-  margin: 6px 0;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  margin: 8px 0;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.06);
   max-width: 78%;
   align-self: flex-end;
   color: var(--text-maroon);
-  font-size: 0.95rem;
-  line-height: 1.4;
+  font-size: 0.96rem;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 /* Assistant bubble (left-aligned) */
 .message-assistant {
-  background: #ffffff;
+  background: var(--pale-blush);
   border-radius: 18px;
-  padding: 12px 16px;
-  margin: 6px 0;
-  border-left: 4px solid var(--gold-1);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  padding: 14px 18px;
+  margin: 8px 0;
+  border-left: 5px solid var(--rose-gold);
+  box-shadow: 0 4px 18px rgba(74,20,48,0.06);
   max-width: 78%;
   align-self: flex-start;
   color: var(--text-maroon);
-  font-size: 0.96rem;
-  line-height: 1.45;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 /* System / metadata style */
 .message-system {
   background: transparent;
   color: #7a5a5a;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   padding: 8px 0;
   text-align: center;
 }
 
-/* Bubbles when assistant is streaming */
+/* Bubbles when assistant is streaming (shimmer) */
 .message-assistant.streaming {
   position: relative;
   overflow: hidden;
@@ -131,49 +151,69 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.0) 100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.32) 50%, rgba(255,255,255,0.0) 100%);
   transform: translateX(-120%);
   animation: shimmer 1.6s infinite;
   pointer-events: none;
 }
 
-/* ===== Inputs and Buttons (upgrade) ===== */
+/* ===== Inputs and Buttons (upgraded) ===== */
 input, textarea {
   border-radius: 20px;
-  border: 1px solid var(--gold-1);
+  border: 1px solid var(--rose-gold-soft, rgba(192,144,48,0.14));
   background: #fffdfa !important;
   color: var(--text-maroon);
   padding: 0.75rem 1rem;
-  transition: box-shadow 160ms ease, transform 120ms ease;
+  transition: box-shadow 160ms ease, transform 120ms ease, border-color 160ms ease;
+  font-size: 1rem;
 }
 
 input:focus, textarea:focus {
   outline: none;
-  box-shadow: 0 6px 20px rgba(192,144,48,0.14);
+  box-shadow: 0 12px 34px rgba(215,164,106,0.10);
   transform: translateY(-1px);
-  border-color: var(--gold-2);
+  border-color: var(--rose-gold);
 }
 
 /* Elevated rounded icon buttons (send, stop) */
 .button-icon {
-  width: 40px;
-  height: 40px;
+  position: relative;
+  z-index: 50;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: var(--gold-1);
+  background: linear-gradient(180deg, var(--rose-gold) 0%, var(--gold-2) 100%);
   color: #fff;
-  box-shadow: 0 6px 18px rgba(192,144,48,0.12);
+  box-shadow: 0 8px 20px rgba(215,164,106,0.16);
   border: none;
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
 }
 .button-icon:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
-.button-icon:hover {
-  background: var(--gold-2);
-  transform: translateY(-2px);
+.button-icon:hover:not(:disabled) {
+  transform: translateY(-3px);
+  filter: brightness(1.03);
+  box-shadow: 0 10px 28px rgba(215,164,106,0.20);
+}
+/* Stop button variant (when streaming) */
+.button-icon.stream-stop {
+  background: linear-gradient(180deg, #a23c3c 0%, #7a1f1f 100%);
+  box-shadow: 0 8px 22px rgba(120,30,30,0.18);
+}
+
+/* Ensure icons inside are white */
+.button-icon svg,
+.button-icon .icon {
+  color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
 }
 
 /* Submit form pill (input container) */
@@ -183,9 +223,11 @@ input:focus, textarea:focus {
   display: flex;
   align-items: center;
   position: relative;
-  background: #fff;
-  border: 1px solid rgba(192,144,48,0.08);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,250,248,0.9));
+  border: 1px solid rgba(215,164,106,0.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+  padding-left: 0.8rem;
+  padding-right: 4.5rem; /* reserve space for button */
 }
 
 /* Input placeholder style */
@@ -193,16 +235,16 @@ input:focus, textarea:focus {
   color: rgba(96,32,32,0.45);
 }
 
-/* ===== Footer / copyright style ===== */
+/* Footer / copyright style */
 .footer-small {
   text-align: center;
   font-size: 0.78rem;
   color: rgba(96,32,32,0.72);
-  opacity: 0.85;
+  opacity: 0.95;
   padding-top: 0.5rem;
 }
 
-/* ===== Small decorative tokens ===== */
+/* Tiny decorative tokens */
 .single-char-link {
   background: var(--card);
   color: var(--text-maroon);
@@ -213,15 +255,9 @@ input:focus, textarea:focus {
   font-size: 0.78rem;
 }
 
-/* ===== Minor global tweaks ===== */
-button {
-  border-radius: 8px;
-}
-
-/* keep the circular floating action (original override kept minimal) */
-button.round {
-  border-radius: 50%;
-}
+/* Minor global tweaks */
+button { border-radius: 8px; }
+button.round { border-radius: 50%; }
 
 /* ===== Subtle accent animations ===== */
 @keyframes shimmer {
@@ -230,56 +266,71 @@ button.round {
   100% { transform: translateX(120%); }
 }
 
-/* small entrance animation for the chat card */
 @keyframes cardIn {
   from { transform: translateY(8px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
-.chat-card {
-  animation: cardIn 220ms ease;
-}
 
-/* ===== Accessibility: focus visible ===== */
+/* Accessibility focus ring */
 :focus-visible {
-  outline: 3px solid rgba(192,144,48,0.18);
+  outline: 3px solid rgba(215,164,106,0.18);
   outline-offset: 2px;
 }
 
-/* ===== Responsive adjustments ===== */
+/* Responsive adjustments */
 @media (max-width: 640px) {
-  .chat-card {
-    border-radius: 1rem;
-    padding: 1rem;
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-  }
-
-  .message-user, .message-assistant {
-    max-width: 92%;
-  }
-
-  .input-pill {
-    height: 52px;
-  }
+  .chat-card { border-radius: 1rem; padding: 1rem; margin-left: 0.5rem; margin-right: 0.5rem; }
+  .message-user, .message-assistant { max-width: 92%; }
+  .input-pill { height: 52px; padding-right: 4rem; }
+  .button-icon { width: 40px; height: 40px; }
 }
 
-/* ===== Preserve older classes (compat) ===== */
-/* These keep your original token names in case components reference them */
+/* Preserve older classes (compat) */
 .message-user-old {
   background: #fff7ea;
   border: 1px solid var(--gold-1);
   border-radius: 14px;
 }
-
 .message-assistant-old {
   background: var(--cream-bg-2);
   border-left: 4px solid var(--gold-1);
   border-radius: 12px;
 }
 
-/* ===== Utility: subtle confetti burst (for "prestige moments") ===== */
-/* Usage: add .confetti when showing success */
-.confetti {
-  position: relative;
-  overflow: visible;
+/* Utility: confetti for success */
+.confetti { position: relative; overflow: visible; }
+
+/* Decorative divider */
+.decorative-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(215,164,106,0.18), transparent);
+  margin: 1rem 0;
+  border-radius: 2px;
+}
+
+/* Vendor card */
+.vendor-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,250,248,0.96));
+  border: 1px solid rgba(215,164,106,0.06);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 6px 22px rgba(74,20,48,0.04);
+}
+
+/* Tag */
+.tag {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(235,201,169,0.18);
+  color: var(--maroon-main, var(--text-maroon));
+  border: 1px solid rgba(215,164,106,0.08);
+}
+
+/* Motion timing tokens */
+:root {
+  --motion-fast: 120ms;
+  --motion-medium: 220ms;
+  --motion-slow: 420ms;
 }
