@@ -404,15 +404,15 @@ ${JSON.stringify(factBlock)}
             writer.write({ type: "text-delta", id: textId, delta: llm || "Could not generate vendor analysis." });
 
             // emit JSON sentinel for UI
-            try {
-              writer.write({
-                type: "text-delta",
-                id: textId,
-                delta: `\n\n__VENDOR_DETAILS_JSON__${JSON.stringify(factBlock)}__END_VENDOR_DETAILS_JSON__`,
-              });
-            } catch (e) {
-              console.warn("[more-details] failed to emit sentinel", e);
-            }
+            //try {
+             // writer.write({
+             //   type: "text-delta",
+             //   id: textId,
+            //    delta: `\n\n__VENDOR_DETAILS_JSON__${JSON.stringify(factBlock)}__END_VENDOR_DETAILS_JSON__`,
+            //  });
+           // } catch (e) {
+             // console.warn("[more-details] failed to emit sentinel", e);
+            //}
 
             writer.write({ type: "text-end", id: textId });
             writer.write({ type: "finish" });
