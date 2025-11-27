@@ -35,65 +35,251 @@
   --radius: 0.75rem;
 }
 
-/* ===== Background Indian Motif (VERY subtle) ===== */
+/* ===== Page background (upgraded to premium gradient + motif) ===== */
+/* Replaces the heavy radial dots with a soft gradient and a large subtle motif */
 body {
-  background: var(--cream-bg);
-  background-image: radial-gradient(
-      rgba(192, 144, 48, 0.05) 1px,
-      transparent 2px
-    ),
-    url("/subtle-mandala.png");
-  background-size: 20px 20px, 600px;
-  background-position: center;
+  background: linear-gradient(135deg, #faf7f2 0%, #fffdf7 100%);
+  /* keep motif but move to corner, larger and subtle */
+  background-image: url("/subtle-mandala.png"), radial-gradient(rgba(192, 144, 48, 0.02) 1px, transparent 2px);
+  background-size: 700px, 25px 25px;
+  background-position: top right, center;
+  background-repeat: no-repeat, repeat;
   color: var(--text-maroon);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ===== Chat Bubble Adjustments ===== */
+/* ===== Frosted / glass utility (use for header, input bar, cards) ===== */
+.frosted {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+}
+
+/* ===== Chat Card (new: center the chat within a white glass card) ===== */
+.chat-card {
+  width: 100%;
+  max-width: 56rem; /* same as max-w-3xl */
+  margin: 0 auto;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 1.25rem; /* rounded-3xl */
+  box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+  border: 1px solid rgba(192,144,48,0.12);
+  padding: 1.5rem;
+}
+
+/* ===== Header tweaks (frosted + thin gold border) ===== */
+.chat-header {
+  border-bottom: 1.5px solid var(--gold-1);
+  background: linear-gradient(to bottom, rgba(255,253,250,0.9), transparent);
+  /* support using frosted class as well */
+}
+
+/* Add subtle floating avatar ring */
+.avatar-ring {
+  box-shadow: 0 2px 8px rgba(192,144,48,0.08);
+  border-radius: 9999px;
+}
+
+/* ===== Chat Bubble Adjustments (more rounded, padding, soft shadows) ===== */
+/* User bubble (right-aligned) */
 .message-user {
+  background: #fff7ea;
+  border: 1px solid var(--gold-1);
+  border-radius: 18px;
+  padding: 12px 16px;
+  margin: 6px 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  max-width: 78%;
+  align-self: flex-end;
+  color: var(--text-maroon);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* Assistant bubble (left-aligned) */
+.message-assistant {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 12px 16px;
+  margin: 6px 0;
+  border-left: 4px solid var(--gold-1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  max-width: 78%;
+  align-self: flex-start;
+  color: var(--text-maroon);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+/* System / metadata style */
+.message-system {
+  background: transparent;
+  color: #7a5a5a;
+  font-size: 0.85rem;
+  padding: 8px 0;
+  text-align: center;
+}
+
+/* Bubbles when assistant is streaming */
+.message-assistant.streaming {
+  position: relative;
+  overflow: hidden;
+}
+.message-assistant.streaming::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.0) 100%);
+  transform: translateX(-120%);
+  animation: shimmer 1.6s infinite;
+  pointer-events: none;
+}
+
+/* ===== Inputs and Buttons (upgrade) ===== */
+input, textarea {
+  border-radius: 20px;
+  border: 1px solid var(--gold-1);
+  background: #fffdfa !important;
+  color: var(--text-maroon);
+  padding: 0.75rem 1rem;
+  transition: box-shadow 160ms ease, transform 120ms ease;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(192,144,48,0.14);
+  transform: translateY(-1px);
+  border-color: var(--gold-2);
+}
+
+/* Elevated rounded icon buttons (send, stop) */
+.button-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--gold-1);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(192,144,48,0.12);
+  border: none;
+}
+.button-icon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.button-icon:hover {
+  background: var(--gold-2);
+  transform: translateY(-2px);
+}
+
+/* Submit form pill (input container) */
+.input-pill {
+  border-radius: 999px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  background: #fff;
+  border: 1px solid rgba(192,144,48,0.08);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+
+/* Input placeholder style */
+::placeholder {
+  color: rgba(96,32,32,0.45);
+}
+
+/* ===== Footer / copyright style ===== */
+.footer-small {
+  text-align: center;
+  font-size: 0.78rem;
+  color: rgba(96,32,32,0.72);
+  opacity: 0.85;
+  padding-top: 0.5rem;
+}
+
+/* ===== Small decorative tokens ===== */
+.single-char-link {
+  background: var(--card);
+  color: var(--text-maroon);
+  border: 1px solid var(--input);
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.35rem;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+/* ===== Minor global tweaks ===== */
+button {
+  border-radius: 8px;
+}
+
+/* keep the circular floating action (original override kept minimal) */
+button.round {
+  border-radius: 50%;
+}
+
+/* ===== Subtle accent animations ===== */
+@keyframes shimmer {
+  0% { transform: translateX(-120%); }
+  60% { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* small entrance animation for the chat card */
+@keyframes cardIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.chat-card {
+  animation: cardIn 220ms ease;
+}
+
+/* ===== Accessibility: focus visible ===== */
+:focus-visible {
+  outline: 3px solid rgba(192,144,48,0.18);
+  outline-offset: 2px;
+}
+
+/* ===== Responsive adjustments ===== */
+@media (max-width: 640px) {
+  .chat-card {
+    border-radius: 1rem;
+    padding: 1rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+
+  .message-user, .message-assistant {
+    max-width: 92%;
+  }
+
+  .input-pill {
+    height: 52px;
+  }
+}
+
+/* ===== Preserve older classes (compat) ===== */
+/* These keep your original token names in case components reference them */
+.message-user-old {
   background: #fff7ea;
   border: 1px solid var(--gold-1);
   border-radius: 14px;
 }
 
-.message-assistant {
+.message-assistant-old {
   background: var(--cream-bg-2);
   border-left: 4px solid var(--gold-1);
   border-radius: 12px;
 }
 
-/* ===== Inputs and Buttons ===== */
-
-input {
-  border-radius: 20px;
-  border: 1px solid var(--gold-1);
-  background: #fffdfa !important;
-  color: var(--text-maroon);
-}
-
-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(192, 144, 48, 0.4);
-}
-
-button {
-  background: var(--gold-1) !important;
-  color: white;
-  border-radius: 50%;
-}
-
-button:hover {
-  background: var(--gold-2) !important;
-}
-
-/* Header design tweaks */
-.chat-header {
-  border-bottom: 2px solid var(--gold-1);
-  background: linear-gradient(to bottom, #fffdfa, transparent);
-}
-
-/* Single character link aesthetic */
-.single-char-link {
-  background: var(--card);
-  color: var(--text-maroon);
-  border: 1px solid var(--input);
+/* ===== Utility: subtle confetti burst (for "prestige moments") ===== */
+/* Usage: add .confetti when showing success */
+.confetti {
+  position: relative;
+  overflow: visible;
 }
