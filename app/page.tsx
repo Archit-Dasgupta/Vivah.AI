@@ -19,7 +19,7 @@ import { MessageWall } from "@/components/messages/message-wall";
 import { ChatHeader, ChatHeaderBlock } from "@/app/parts/chat-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UIMessage } from "ai";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { AI_NAME, CLEAR_CHAT_TEXT, OWNER_NAME, WELCOME_MESSAGE } from "@/config";
 import Image from "next/image";
 import Link from "next/link";
@@ -181,8 +181,8 @@ export default function Chat() {
   return (
     <div className="flex h-screen justify-center items-center">
       <main className="w-full h-screen relative">
-        {/* ===== Premium Header with Glass Effect (opaque if you switch to chat-header) ===== */}
-        <div className="fixed top-0 left-0 right-0 z-50 glass-header">
+        {/* ===== Header (opaque by default) ===== */}
+        <div className="fixed top-0 left-0 right-0 z-50 chat-header">
           <ChatHeader>
             <ChatHeaderBlock />
             <ChatHeaderBlock className="justify-center items-center gap-3">
@@ -198,7 +198,7 @@ export default function Chat() {
                 <p className="tracking-tight font-semibold text-[var(--deep-plum)] text-base">
                   Chat with {AI_NAME}
                 </p>
-                <p className="text-xs text-[var(--rich-burgundy)] opacity-70">
+                <p className="text-xs text-[var(--rich-burgundy)] opacity-75">
                   Your Wedding Planning Assistant
                 </p>
               </div>
@@ -220,7 +220,13 @@ export default function Chat() {
         </div>
 
         {/* ===== Messages Area (centered column) ===== */}
-        <div className="h-screen overflow-y-auto px-4 sm:px-6 py-4 pt-[110px] pb-[160px]">
+        <div
+          className="h-screen overflow-y-auto px-4 sm:px-6 py-4"
+          style={{
+            paddingTop: "calc(var(--header-height) + 12px)",
+            paddingBottom: "140px",
+          }}
+        >
           <div className="flex flex-col items-center">
             {/* Constrain chat column so messages sit centered on large screens */}
             <div className="w-full max-w-3xl mx-auto">
@@ -273,19 +279,21 @@ export default function Chat() {
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel className="sr-only">Message</FieldLabel>
                       <div className="relative flex items-center">
-                        <Input
-                          {...field}
-                          placeholder="Ask about venues, vendors, or budget planning..."
-                          className="input-premium h-14 pl-6 pr-16 w-full"
-                          disabled={status === "streaming"}
-                          aria-label="Message"
-                        />
+                        <div className="input-premium w-full">
+                          <Input
+                            {...field}
+                            placeholder="Ask about venues, vendors, or budget planning..."
+                            className="h-14 pl-4 pr-6 w-full bg-transparent"
+                            disabled={status === "streaming"}
+                            aria-label="Message"
+                          />
+                        </div>
 
                         {(status === "ready" || status === "error") && (
                           <button
                             type="submit"
                             disabled={!field.value?.trim()}
-                            className="btn-premium absolute right-3 top-1/2 -translate-y-1/2"
+                            className="btn-premium absolute right-3 top-1/2 -translate-y-1/2 metallic-sheen"
                             style={{ zIndex: 10 }}
                             aria-label="Send message"
                           >
