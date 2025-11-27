@@ -1,21 +1,19 @@
-import React from "react";
+import { UIMessage } from "ai";
+import { useEffect, useRef } from "react";
+// Keep your original imports, but we will guard against them being undefined at runtime.
+import { UserMessage } from "./user-message";
+import { AssistantMessage } from "./assistant-message";
 
-type MessagePart =
-  | { type: "text"; text: string }
-  | { type: "tool-result"; tool: string; result: any }
-  | { type: string; [k: string]: any };
-
-type UIMessage = {
-  id?: string;
-  role: "user" | "assistant" | "system";
-  parts?: MessagePart[];
-  // for backward compatibility, sometimes message may be a plain string
-  text?: string;
+type Props = {
+  messages: UIMessage[];
+  status?: string;
+  durations?: Record<string, number>;
+  onDurationChange?: (key: string, duration: number) => void;
 };
 
 type VendorHit = {
-  id?: string | number | null;
-  name?: string | null;
+  id: string | null;
+  name: string | null;
   category?: string | null;
   city?: string | null;
   price_min?: number | null;
@@ -28,128 +26,152 @@ type VendorHit = {
   raw?: any;
 };
 
-type Props = {
-  messages: UIMessage[];
-  // optional: small render config
-  maxCards?: number;
-};
+export function MessageWall({ messages, status, durations, onDurationChange }: Props) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-export default function MessageWall({ messages, maxCards = 6 }: Props) {
-  // Helper: combine text parts into a single string
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ---- Guard component references so invalid imports don't crash the whole app ----
+  const SafeUserMessage: any =
+    typeof UserMessage === "function"
+      ? UserMessage
+      : // fallback simple renderer
+        ({ message }: { message: UIMessage }) => {
+          const text = (message.parts || []).map((p: any) => (p?.type === "text" ? p.text || "" : "")).join("");
+          return <div className="inline-block bg-white p-3 rounded shadow text-sm">{text}</div>;
+        };
+
+  const SafeAssistantMessage: any =
+    typeof AssistantMessage === "function"
+      ? AssistantMessage
+      : // fallback simple renderer for assistant content
+        ({ message }: { message: UIMessage }) => {
+          const text = (message.parts || []).map((p: any) => (p?.type === "text" ? p.text || "" : "")).join("");
+          return <div className="inline-block bg-white p-3 rounded shadow text-sm">{text}</div>;
+        };
+
+  // If either import was undefined, log which one so we can fix import paths.
+  if (typeof UserMessage !== "function") {
+    // eslint-disable-next-line no-console
+    console.warn("MessageWall: UserMessage import is not a function. Falling back to SafeUserMessage. Check ./user-message export (named vs default).", UserMessage);
+  }
+  if (typeof AssistantMessage !== "function") {
+    // eslint-disable-next-line no-console
+    console.warn("MessageWall: AssistantMessage import is not a function. Falling back to SafeAssistantMessage. Check ./assistant-message export (named vs default).", AssistantMessage);
+  }
+
+  // Helper: join UIMessage parts into plain text
   function messageToText(m: UIMessage): string {
-    if (!m) return "";
-    // prefer parts if present
-    if (Array.isArray(m.parts)) {
-      return m.parts
-        .filter((p) => p.type === "text" && typeof (p as any).text === "string")
-        .map((p) => (p as any).text)
-        .join("");
+    try {
+      if (m.parts && Array.isArray(m.parts)) {
+        return m.parts.map((p: any) => (p?.type === "text" ? (p.text ?? "") : "")).join("");
+      }
+      // fallback to `content` if present
+      // @ts-ignore
+      if (m.content && typeof m.content === "string") return m.content;
+      return "";
+    } catch (e) {
+      return "";
     }
-    // fallback fields
-    if (typeof (m as any).text === "string") return (m as any).text;
-    return "";
   }
 
-  // Parse sentinel JSON from text: __VENDOR_HITS_JSON__{...}__END_VENDOR_HITS_JSON__
+  // Helper: extract JSON sentinel from assistant text
   function extractVendorHitsFromText(text: string): VendorHit[] | null {
-    if (!text) return null;
-    const re = /__VENDOR_HITS_JSON__([\s\S]*?)__END_VENDOR_HITS_JSON__/m;
-    const m = text.match(re);
-    if (!m) return null;
+    const startToken = "__VENDOR_HITS_JSON__";
+    const endToken = "__END_VENDOR_HITS_JSON__";
+    const s = text.indexOf(startToken);
+    const e = text.indexOf(endToken);
+    if (s === -1 || e === -1 || e <= s) return null;
+    const jsonStr = text.slice(s + startToken.length, e);
     try {
-      const parsed = JSON.parse(m[1]);
-      if (Array.isArray(parsed)) return parsed;
-      if (parsed && Array.isArray(parsed.result)) return parsed.result;
-      return null;
-    } catch (e) {
-      console.warn("Failed to parse vendor hits sentinel JSON:", e);
+      const parsed = JSON.parse(jsonStr);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("MessageWall: failed to parse vendor JSON sentinel", err);
       return null;
     }
   }
 
-  // Strip any sentinel JSON blocks out of assistant text for display
+  // Helper: remove sentinel block from text, return trimmed human text
   function stripSentinelFromText(text: string): string {
-    if (!text) return "";
-    // remove vendor hits / details / reviews sentinels
-    const sentinelRegex = /(__VENDOR_HITS_JSON__[\s\S]*?__END_VENDOR_HITS_JSON__)|(__VENDOR_DETAILS_JSON__[\s\S]*?__END_VENDOR_DETAILS_JSON__)|(__VENDOR_REVIEWS_JSON__[\s\S]*?__END_VENDOR_REVIEWS_JSON__)|(__GUIDE_JSON___[\s\S]*?___END_GUIDE_JSON___)/g;
-    return text.replace(sentinelRegex, "").trim();
+    const startToken = "__VENDOR_HITS_JSON__";
+    const idx = text.indexOf(startToken);
+    if (idx === -1) return text;
+    return text.slice(0, idx).trim();
   }
 
-  // Dispatch events so existing UI handlers can act (details panel, reviews panel)
-  function emitVendorDetailsEvent(payload: any) {
+  // Emit window events so outer client can handle follow-ups without changing props
+  function emitMoreDetails(vendorName: string | null) {
     try {
-      window.dispatchEvent(new CustomEvent("vendor_details", { detail: payload }));
+      const ev = new CustomEvent("chat_action_more_details", { detail: { vendorName } });
+      window.dispatchEvent(ev);
     } catch (e) {
-      console.warn("emitVendorDetailsEvent failed", e);
+      // ignore where CustomEvent is restricted
     }
   }
-  function emitVendorReviewsEvent(payload: any) {
+  function emitReviews(vendorName: string | null) {
     try {
-      window.dispatchEvent(new CustomEvent("vendor_reviews", { detail: payload }));
-    } catch (e) {
-      console.warn("emitVendorReviewsEvent failed", e);
-    }
+      const ev = new CustomEvent("chat_action_reviews", { detail: { vendorName } });
+      window.dispatchEvent(ev);
+    } catch (e) {}
   }
 
-  // Render a simple vendor card. Keep styling minimal - adapt to your CSS framework.
-  function VendorCard({ vendor }: { vendor: VendorHit }) {
-    const img = Array.isArray(vendor.images) && vendor.images.length ? vendor.images[0] : null;
-    const priceStr =
-      vendor.price_min || vendor.price_max
-        ? `₹${vendor.price_min ?? "NA"} - ₹${vendor.price_max ?? "NA"}`
-        : vendor.raw?.price_range || "Price not provided";
-
+  function VendorCard({ v }: { v: VendorHit }) {
     return (
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          alignItems: "flex-start",
-          border: "1px solid #b86d3b",
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 12,
-          background: "#fff",
-        }}
-      >
-        <div style={{ width: 96, height: 96, flexShrink: 0, background: "#f2f2f2", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-          {img ? (
-            <img src={img} alt={vendor.name ?? "vendor image"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      <div className="w-full border rounded-lg p-4 bg-white shadow-sm flex gap-4">
+        <div className="w-24 h-24 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+          {v.images && v.images.length ? (
+            <img
+              src={v.images[0]}
+              style={{ width: 96, height: 96, objectFit: "cover" }}
+              onError={(e) => {
+                // hide broken image
+                // @ts-ignore
+                e.currentTarget.style.display = "none";
+              }}
+            />
           ) : (
-            <div style={{ color: "#8a8a8a", fontSize: 12 }}>No image</div>
+            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No image</div>
           )}
         </div>
 
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+        <div className="flex-1">
+          <div className="flex justify-between items-start">
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: "#6b1f11" }}>{vendor.name ?? "Vendor"}</div>
-              <div style={{ fontSize: 12, color: "#666" }}>{vendor.category ?? ""} • {vendor.city ?? ""}</div>
+              <div className="font-semibold text-sm">{v.name}</div>
+              <div className="text-xs text-gray-600">{v.category ?? ""} • {v.city ?? ""}</div>
             </div>
-            <div style={{ fontSize: 12, color: "#444" }}>{vendor.rating ? `${vendor.rating}/5` : null}</div>
+            <div className="text-right text-xs">
+              {v.rating ? <div className="font-medium">{v.rating}/5</div> : null}
+              <div className="text-gray-500">{v.is_veg === true ? "Veg-only" : v.is_veg === false ? "Veg & Non-veg" : ""}</div>
+            </div>
           </div>
 
-          <div style={{ marginTop: 8, color: "#333" }}>{vendor.short_description ?? (vendor.raw?.short_description ?? "")}</div>
-          <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+          {v.short_description ? <div className="mt-2 text-sm text-gray-700">{v.short_description}</div> : null}
+
+          <div className="mt-3 flex gap-2">
             <button
-              onClick={() => emitVendorDetailsEvent(vendor)}
-              style={{ padding: "6px 12px", borderRadius: 18, border: "none", background: "#c78e2a", color: "#fff", cursor: "pointer" }}
+              className="px-3 py-1 rounded bg-[var(--gold-2)] text-white text-sm"
+              onClick={() => emitMoreDetails(v.name)}
             >
               More details
             </button>
+
             <button
-              onClick={() =>
-                emitVendorReviewsEvent({
-                  vendor_id: vendor.id ?? vendor.raw?.id,
-                  vendor_name: vendor.name,
-                })
-              }
-              style={{ padding: "6px 12px", borderRadius: 18, border: "none", background: "#c78e2a", color: "#fff", cursor: "pointer" }}
+              className="px-3 py-1 rounded border text-sm"
+              onClick={() => emitReviews(v.name)}
             >
               Reviews
             </button>
 
-            <div style={{ marginLeft: "auto", fontSize: 12, color: "#666" }}>{priceStr}</div>
+            {v.contact && (
+              <a className="ml-auto text-sm underline text-[var(--text-maroon)]" href={`tel:${v.contact}`}>
+                Call
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -157,70 +179,53 @@ export default function MessageWall({ messages, maxCards = 6 }: Props) {
   }
 
   return (
-    <div>
-      {messages.map((m, mi) => {
-        const rawText = messageToText(m);
-        // Prefer structured tool-result parts:
-        let vendorHits: VendorHit[] | null = null;
-        let vendorDetailsPayload: any = null;
-        let vendorReviewsPayload: any = null;
+    <div className="relative max-w-3xl w-full">
+      <div className="relative flex flex-col gap-4">
+        {messages.map((message, messageIndex) => {
+          const isLastMessage = messageIndex === messages.length - 1;
+          const text = messageToText(message);
+          const hits = message.role === "assistant" ? extractVendorHitsFromText(text) : null;
+          const humanText = message.role === "assistant" ? stripSentinelFromText(text) : text;
 
-        if (Array.isArray(m.parts)) {
-          for (const part of m.parts as MessagePart[]) {
-            if (part.type === "tool-result" && (part as any).tool === "vendor_hits" && Array.isArray((part as any).result)) {
-              vendorHits = (part as any).result.slice(0, maxCards) as VendorHit[];
-              // we prefer the explicit structured hits; stop here
-              break;
-            }
-          }
-          // capture details / reviews even if hits is present (so we can dispatch on render)
-          for (const part of m.parts as MessagePart[]) {
-            if (part.type === "tool-result" && (part as any).tool === "vendor_details" && (part as any).result) {
-              vendorDetailsPayload = (part as any).result;
-            }
-            if (part.type === "tool-result" && (part as any).tool === "vendor_reviews" && (part as any).result) {
-              vendorReviewsPayload = (part as any).result;
-            }
-          }
-        }
+          // Build a simple shallow clone object used only for passing to AssistantMessage
+          const safeMessageForAssistant: UIMessage = (() => {
+            if (message.role !== "assistant") return message;
+            const clone: any = { ...message };
+            clone.parts = [{ type: "text", text: humanText }];
+            if (clone.content) clone.content = humanText;
+            return clone;
+          })();
 
-        // Fallback: sentinel JSON embedded in text
-        if (!vendorHits) {
-          vendorHits = extractVendorHitsFromText(rawText);
-          if (vendorHits && vendorHits.length > maxCards) vendorHits = vendorHits.slice(0, maxCards);
-        }
+          return (
+            <div key={message.id} className="w-full">
+              {message.role === "user" ? (
+                <SafeUserMessage message={message} />
+              ) : (
+                <>
+                  <SafeAssistantMessage
+                    message={safeMessageForAssistant}
+                    status={status}
+                    isLastMessage={isLastMessage}
+                    durations={durations}
+                    onDurationChange={onDurationChange}
+                  />
 
-        // Human-visible text should have sentinels removed
-        const humanText = m.role === "assistant" ? stripSentinelFromText(rawText) : rawText;
+                  {/* if there are vendor hits, render cards */}
+                  {hits && hits.length ? (
+                    <div className="mt-3 grid gap-3">
+                      {hits.map((h) => (
+                        <VendorCard key={h.id ?? h.name ?? Math.random()} v={h as VendorHit} />
+                      ))}
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+          );
+        })}
 
-        // If a tool-result payload exists for details/reviews, dispatch immediately so UI can show panels
-        // (This can be adapted - we dispatch once when we render the assistant message)
-        React.useEffect(() => {
-          if (vendorDetailsPayload) emitVendorDetailsEvent(vendorDetailsPayload);
-          if (vendorReviewsPayload) emitVendorReviewsEvent(vendorReviewsPayload);
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [mi]); // run once per message render
-
-        return (
-          <div key={m.id ?? mi} style={{ marginBottom: 18 }}>
-            {/* Human text bubble */}
-            {humanText ? (
-              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: m.role === "assistant" ? "#4b2a26" : "#222", padding: "6px 2px" }}>
-                {humanText}
-              </div>
-            ) : null}
-
-            {/* Vendor cards area (if present) */}
-            {vendorHits && vendorHits.length ? (
-              <div style={{ marginTop: 12 }}>
-                {vendorHits.map((v, i) => (
-                  <VendorCard key={v.id ?? i} vendor={v} />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
+        <div ref={messagesEndRef} />
+      </div>
     </div>
   );
 }
